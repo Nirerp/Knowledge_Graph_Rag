@@ -1,0 +1,31 @@
+# Qdrant Configuration -------------------------------------------------------
+# Port exposed for the Qdrant REST API inside docker-compose.
+QDRANT_HTTP_PORT=6333
+# Port exposed for the Qdrant gRPC API inside docker-compose.
+QDRANT_GRPC_PORT=6334
+
+# Neo4j Configuration --------------------------------------------------------
+# Credentials are defined as username/password. Change the password in prod.
+NEO4J_AUTH=neo4j/password
+# Neo4j Browser / HTTP interface port.
+NEO4J_HTTP_PORT=7474
+# Bolt protocol port (Python driver connects here).
+NEO4J_BOLT_PORT=7687
+
+# Embedding / LLM Configuration ----------------------------------------------
+# Name of the embedding model your app will call (can be OpenAI, local, etc.).
+EMBEDDING_MODEL=gemma
+
+# Primary LLM identifier. Examples:
+#   perplexity/sonar-pro
+#   openai/gpt-4o-mini
+#   deepseek/deepseek-chat
+#   ollama/llama3.2
+LLM_MODEL=perplexity/sonar-pro
+
+# API key for the LLM provider. Placeholder value only—replace before running.
+LLM_API_KEY=YOUR_LLM_API_KEY_HERE
+
+# Optional: uncomment if you need provider-specific overrides or fallbacks
+# SECONDARY_LLM_MODEL=
+# SECONDARY_LLM_API_KEY=

@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+
+# Database data directories (created by Docker Compose)
+neo4j/
+qdrant_data/
+
+# redundant files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info

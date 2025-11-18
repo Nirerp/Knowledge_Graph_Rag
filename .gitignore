@@ -14,6 +14,15 @@ wheels/
 neo4j/
 qdrant_data/
 
+# Raw data folder - ignore contents but keep folder structure
+raw_data/*
+!raw_data/.gitkeep
+*.pdf
+*.txt
+*.jpg
+*.jpeg
+*.png
+
 # redundant files
 __pycache__/
 *.py[oc]

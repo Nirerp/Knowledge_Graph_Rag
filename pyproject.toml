@@ -5,11 +5,17 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "docling>=2.62.0",
+    "easyocr>=1.7.2",
     "ipykernel>=7.1.0",
+    "ipywidgets>=8.1.8",
+    "langchain-text-splitters>=1.0.0",
     "litellm>=1.80.0",
     "neo4j>=5.17.0,<6.0.0", # Downgraded for neo4j-graphrag compatibility
     "neo4j-graphrag",
+    "onnxruntime>=1.23.2",
     "pydantic>=2.12.4",
     "python-dotenv>=1.2.1",
     "qdrant-client>=1.15.1",
+    "rapidocr>=3.4.2",
 ]

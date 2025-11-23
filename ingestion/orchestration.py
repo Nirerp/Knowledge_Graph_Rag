@@ -63,7 +63,7 @@ class Orchestrator:
 
         return GraphComponents.model_validate_json(response.choices[0].message.content)
     
-    def extract_graph_components(self, raw_text):
+    def extract_graph_components(self, raw_text) -> tuple[dict, list]:
         """
         This function extracts the graph components from the raw text.
 

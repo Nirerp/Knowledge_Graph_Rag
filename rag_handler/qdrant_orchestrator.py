@@ -3,7 +3,6 @@ This module handles everything related to Qdrant.
 """
 
 import os
-import uuid
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.exceptions import UnexpectedResponse
 from dotenv import load_dotenv
@@ -22,7 +21,12 @@ class QdrantOrchestrator:
     - etc
     """
 
-    def __init__(self, qdrant_url: str, qdrant_key: str | None = None):
+    def __init__(
+        self,
+        qdrant_url: str,
+        collection_name: str = "QdrantRagCollection",
+        qdrant_key: str | None = None,
+    ):
         """
         Initialize Qdrant client.
 
@@ -62,33 +66,43 @@ class QdrantOrchestrator:
             else:
                 print(f"Error while checking collection: {exc}")
 
-    def ingest_to_qdrant(self, collection_name, embedded_data):
+    def ingest_to_qdrant(self, collection_name, embedded_data, chunk_node_mapping):
         """
-        This function ingests the data to Qdrant, as in embedded data -> Vector in Qdrant.
+        Ingest embeddings to Qdrant with chunk IDs that match Neo4j.
 
         Args:
             collection_name: Name of the collection to ingest to.
             embedded_data: List of dictionaries containing file info, chunks, and embeddings.
-                           Format: [{"file": "name", "chunks": [...], "embeddings": [...]}, ...]
+                           Format: [{"source_file": "name", "chunks": [...], "embeddings": [...]}, ...]
+            chunk_node_mapping: Dict mapping chunk UUIDs to chunk metadata (from orchestration)
         """
+        # Convert chunk_node_mapping to a list in the same order as chunks
+        chunk_ids = list(chunk_node_mapping.keys())
+
         points = []
+        chunk_idx = 0  # Global counter across all files
+
         for file_entry in embedded_data:
-            file_name = file_entry["file"]
+            file_name = file_entry["source_file"]
             chunks = file_entry["chunks"]
             embeddings = file_entry["embeddings"]
 
             for i, (chunk, vector) in enumerate(zip(chunks, embeddings)):
+                chunk_id = chunk_ids[chunk_idx]  # Use the same UUID from Neo4j
+
                 points.append(
                     models.PointStruct(
-                        id=str(uuid.uuid4()),
+                        id=chunk_id,  # CHANGED: Use chunk UUID instead of random UUID
                         vector=vector,
                         payload={
+                            "id": chunk_id,  # NEW: Add id to payload for retriever
                             "text": chunk,
                             "source_file": file_name,
                             "chunk_index": i,
                         },
                     )
                 )
+                chunk_idx += 1
 
         self.qdrant_client.upsert(collection_name=collection_name, points=points)
 

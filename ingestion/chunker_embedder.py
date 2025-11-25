@@ -102,54 +102,64 @@ class ChunkerEmbedder:
     def embedding_text(self, text: str) -> List[float]:
         """
         This function embeds a single text string.
-        
+
         Args:
             text: Single text string to embed
-            
+
         Returns:
             Embedding vector as list of floats
         """
         embedding_model = os.getenv("EMBEDDING_MODEL")
         response = embedding(model=embedding_model, input=text)
-        return response.data[0].embedding
-    
-    def embed_chunks(self, chunked_data: List[Dict[str, List[str]]]) -> List[Dict[str, any]]:
+        item = response.data[0]
+        if isinstance(item, dict):
+            return item["embedding"]
+        return item.embedding
+
+    def embed_chunks(
+        self, chunked_data: List[Dict[str, List[str]]]
+    ) -> List[Dict[str, any]]:
         """
         Embed all chunks from chunked data structure, preserving file associations.
-        
+
         Args:
             chunked_data: List of dicts with format [{"file": "...", "chunks": [...]}, ...]
-            
+
         Returns:
             List of dicts with format [{"file": "...", "chunks": [...], "embeddings": [...]}, ...]
             where embeddings[i] corresponds to chunks[i]
         """
         embedding_model = os.getenv("EMBEDDING_MODEL")
         result = []
-        
+
         # Embed chunks per file to preserve file association
         for file_data in chunked_data:
             chunks = file_data["chunks"]
             if not chunks:  # Skip if no chunks
                 continue
-            
+
             # Embed all chunks for this file at once
             response = embedding(model=embedding_model, input=chunks)
             # Extract embeddings - handle both dict and object responses
             embeddings = []
             for item in response.data:
                 if isinstance(item, dict):
-                    embeddings.append(item.get('embedding', item))
+                    embeddings.append(item.get("embedding", item))
                 else:
-                    embeddings.append(item.embedding if hasattr(item, 'embedding') else item)
-            
-            result.append({
-                "file": file_data["file"],
-                "chunks": chunks,
-                "embeddings": embeddings
-            })
-        
+                    embeddings.append(
+                        item.embedding if hasattr(item, "embedding") else item
+                    )
+
+            result.append(
+                {
+                    "source_file": file_data["file"],
+                    "chunks": chunks,
+                    "embeddings": embeddings,
+                }
+            )
+
         return result
+
 
 if __name__ == "__main__":
     pass

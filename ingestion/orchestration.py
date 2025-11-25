@@ -2,11 +2,11 @@
 Also, this module contains embedding functions, chunking functions and any other functions necessary for raw text input.
 
 """
+
 import uuid
 from litellm import completion
 from config.config import LLM_INGESTION_PROMPT
 from config.datasets import GraphComponents
-
 
 
 class Orchestrator:
@@ -62,8 +62,8 @@ class Orchestrator:
         )
 
         return GraphComponents.model_validate_json(response.choices[0].message.content)
-    
-    def extract_graph_components(self, raw_text) -> tuple[dict, list]:
+
+    def extract_graph_components(self, raw_text) -> tuple[dict, list, dict]:
         """
         This function extracts the graph components from the raw text.
 
@@ -73,9 +73,11 @@ class Orchestrator:
         Returns:
             nodes: A dictionary of nodes.
             relationships: A list of relationships.
+            chunk_node_mapping: A dictionary mapping chunk UUIDs to chunk data and entity IDs.
         """
         nodes = {}
         relationships = []
+        chunk_node_mapping = {}  # NEW: Track which entities appear in which chunks
 
         # Normalize input into iterable chunks
         chunks_to_process = []
@@ -94,7 +96,15 @@ class Orchestrator:
         else:
             raise ValueError("raw_text must be a string or list of chunks.")
 
-        for chunk in chunks_to_process:
+        for idx, chunk in enumerate(chunks_to_process):
+            chunk_id = str(uuid.uuid4())  # NEW: Generate UUID for this chunk
+            chunk_node_mapping[chunk_id] = {
+                "text": chunk["text"],
+                "source_file": chunk["source"],
+                "chunk_index": idx,
+                "entity_ids": [],  # NEW: Track entities mentioned in this chunk
+            }
+
             system_prompt = (
                 "Extract nodes and relationships from the following text:\n"
                 f"{chunk['text']}"
@@ -110,8 +120,18 @@ class Orchestrator:
                 if node and node not in nodes:
                     nodes[node] = str(uuid.uuid4())
 
+                # NEW: Add entity to this chunk's entity list
+                if node:
+                    chunk_node_mapping[chunk_id]["entity_ids"].append(nodes[node])
+
                 if target_node and target_node not in nodes:
                     nodes[target_node] = str(uuid.uuid4())
+
+                # NEW: Add target entity to this chunk's entity list
+                if target_node:
+                    chunk_node_mapping[chunk_id]["entity_ids"].append(
+                        nodes[target_node]
+                    )
 
                 if target_node and relationship:
                     relationships.append(
@@ -123,7 +143,7 @@ class Orchestrator:
                         }
                     )
 
-        return nodes, relationships
+        return nodes, relationships, chunk_node_mapping  # NEW: Return 3 values
 
 
 if __name__ == "__main__":

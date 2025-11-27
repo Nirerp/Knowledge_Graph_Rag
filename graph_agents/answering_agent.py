@@ -1,4 +1,5 @@
 from graph_agents.config.const import SYSTEM_PROMPT
+from graph_agents.config.schemas import AgentResponse
 
 from agents import Agent, Runner, function_tool, set_tracing_disabled
 from agents.extensions.models.litellm_model import LitellmModel
@@ -42,7 +43,40 @@ async def main():
 
             # Run the agent with the user's input
             result = await Runner.run(agent, user_input)
-            print(f"\nAgent: {result.final_output}")
+
+            # Try to parse JSON response into AgentResponse
+            try:
+                import json
+
+                # Extract JSON from response (in case there's extra text)
+                output_str = str(result.final_output)
+
+                # Find JSON object in the string
+                json_start = output_str.find("{")
+                json_end = output_str.rfind("}") + 1
+
+                if json_start != -1 and json_end > json_start:
+                    json_str = output_str[json_start:json_end]
+                    response_data = json.loads(json_str)
+                    response = AgentResponse(**response_data)
+
+                    # Format structured output with emojis
+                    print("\n💬 Answer:")
+                    print(f"   {response.answer}\n")
+                    print("📚 Sources:")
+                    for source in response.sources:
+                        print(f"   • {source}")
+                    print("\n🔍 Retrieval Info:")
+                    print(
+                        f"   Qdrant: {response.chunks_retrieved} chunks  |  Neo4j: {response.relationships_found} relationships\n"
+                    )
+                else:
+                    # No JSON found, print as-is
+                    print(f"\nAgent: {result.final_output}\n")
+
+            except (json.JSONDecodeError, KeyError, TypeError):
+                # Fallback for non-JSON or malformed responses
+                print(f"\nAgent: {result.final_output}\n")
 
         except KeyboardInterrupt:
             print("\nGoodbye!")

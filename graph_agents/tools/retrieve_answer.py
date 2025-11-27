@@ -42,7 +42,7 @@ def search_qdrant(neo4j_driver, qdrant_client, query_vector, top_k=5):
 
 
 def parse_retriever_results(retriever_result):
-    """Step 3: Extract Text and IDs from Retriever Results"""
+    """Step 3: Extract Text, IDs, and Metadata from Retriever Results"""
     chunks = []
     chunk_ids = []
 
@@ -59,7 +59,31 @@ def parse_retriever_results(retriever_result):
             id_end = content.find("'", id_start)
             chunk_id = content[id_start:id_end]
 
-            chunks.append(chunk_text)
+            # Extract source_file
+            source_start = content.find("'source_file': '") + len("'source_file': '")
+            source_end = content.find("'", source_start)
+            source_file = (
+                content[source_start:source_end]
+                if source_start > len("'source_file': '") - 1
+                else "Unknown"
+            )
+
+            # Extract chunk_index
+            index_start = content.find("'chunk_index': ") + len("'chunk_index': ")
+            index_end = content.find(",", index_start)
+            chunk_index = (
+                content[index_start:index_end]
+                if index_start > len("'chunk_index': ") - 1
+                else "?"
+            )
+
+            chunks.append(
+                {
+                    "text": chunk_text,
+                    "source_file": source_file,
+                    "chunk_index": chunk_index,
+                }
+            )
             chunk_ids.append(chunk_id)
         except Exception:
             continue
@@ -91,16 +115,17 @@ def fetch_graph_context(neo4j_driver, chunk_ids):
 
 
 def format_context(chunks, relationships):
-    """Step 5: Format everything into a context string"""
-    chunks_str = "\n\n".join(
-        [f"Chunk {i + 1}:\n{text}" for i, text in enumerate(chunks)]
-    )
+    """Step 5: Format everything into a context string with citations"""
+    chunks_str = ""
+    for i, chunk in enumerate(chunks):
+        citation = f"[Source: {chunk['source_file']}, Chunk {chunk['chunk_index']}]"
+        chunks_str += f"Chunk {i + 1} {citation}:\n{chunk['text']}\n\n"
+
     graph_str = "\n".join(relationships)
 
     return f"""
 === RELEVANT TEXT CHUNKS ===
 {chunks_str}
-
 === KNOWLEDGE GRAPH CONTEXT ===
 {graph_str}
 """

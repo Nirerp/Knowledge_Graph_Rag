@@ -1,0 +1,70 @@
+{{- if .Values.ollama.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  labels:
+    app: ollama
+spec:
+  replicas: {{ .Values.ollama.replicas }}
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+        - name: ollama
+          image: "{{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}"
+          imagePullPolicy: {{ .Values.ollama.image.pullPolicy }}
+          ports:
+            - containerPort: 11434
+          env:
+            - name: OLLAMA_LLM_MODEL
+              value: {{ .Values.ollama.models.llm | quote }}
+            - name: OLLAMA_EMBEDDING_MODEL
+              value: {{ .Values.ollama.models.embedding | quote }}
+          resources:
+            requests:
+              memory: {{ .Values.ollama.resources.requests.memory }}
+              cpu: {{ .Values.ollama.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.ollama.resources.limits.memory }}
+              cpu: {{ .Values.ollama.resources.limits.cpu }}
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+          readinessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: ollama-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+spec:
+  type: {{ .Values.ollama.service.type }}
+  ports:
+    - port: {{ .Values.ollama.service.port }}
+      targetPort: 11434
+      {{- if eq .Values.ollama.service.type "NodePort" }}
+      nodePort: {{ .Values.ollama.service.nodePort }}
+      {{- end }}
+  selector:
+    app: ollama
+{{- end }}
+

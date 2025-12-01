@@ -1,0 +1,88 @@
+{{- if .Values.webUi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-ui
+  labels:
+    app: web-ui
+spec:
+  replicas: {{ .Values.webUi.replicas }}
+  selector:
+    matchLabels:
+      app: web-ui
+  template:
+    metadata:
+      labels:
+        app: web-ui
+    spec:
+      volumes:
+        - name: raw-data
+          persistentVolumeClaim:
+            claimName: raw-data-pvc
+      containers:
+        - name: web-ui
+          image: "{{ .Values.webUi.image.repository }}:{{ .Values.webUi.image.tag }}"
+          imagePullPolicy: {{ .Values.webUi.image.pullPolicy }}
+          ports:
+            - containerPort: 5000
+          env:
+            - name: LLM_MODEL
+              value: {{ .Values.ragApi.config.llmModel }}
+            - name: EMBEDDING_MODEL
+              value: {{ .Values.ragApi.config.embeddingModel }}
+            - name: EMBEDDING_DIMENSION
+              value: "{{ .Values.ragApi.config.embeddingDimension }}"
+            - name: OLLAMA_URL
+              value: "http://ollama:11434"
+            - name: QDRANT_URL
+              value: "http://qdrant"
+            - name: QDRANT_HTTP_PORT
+              value: "6333"
+            - name: NEO4J_URL
+              value: "bolt://neo4j"
+            - name: NEO4J_BOLT_PORT
+              value: "7687"
+            - name: NEO4J_AUTH
+              value: {{ .Values.neo4j.auth }}
+            - name: RAG_API_URL
+              value: "http://rag-api:8000"
+            - name: RAW_DATA_FOLDER
+              value: "/app/raw_data"
+            - name: LLM_API_KEY
+              value: {{ .Values.ragApi.config.llmApiKey | quote }}
+            {{- if .Values.ragApi.config.llmApiKey }}
+            - name: GEMINI_API_KEY
+              value: {{ .Values.ragApi.config.llmApiKey | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: raw-data
+              mountPath: /app/raw_data
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-ui
+spec:
+  type: {{ .Values.webUi.service.type }}
+  ports:
+    - port: {{ .Values.webUi.service.port }}
+      targetPort: 5000
+      {{- if eq .Values.webUi.service.type "NodePort" }}
+      nodePort: {{ .Values.webUi.service.nodePort }}
+      {{- end }}
+  selector:
+    app: web-ui
+{{- end }}
+

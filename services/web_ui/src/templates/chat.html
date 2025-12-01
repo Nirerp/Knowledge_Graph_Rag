@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - Graph RAG{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-header">
+        <h1>Knowledge Assistant</h1>
+        <p class="subtitle">Powered by Hybrid RAG - Vector Search + Knowledge Graph</p>
+    </div>
+    
+    <div class="chat-messages" id="chatMessages">
+        <div class="message assistant-message">
+            <div class="message-avatar">&#9670;</div>
+            <div class="message-content">
+                <div class="message-text">
+                    Hello! I'm your Knowledge Assistant. I can answer questions using both semantic search and knowledge graph relationships. What would you like to know?
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="chat-input-container">
+        <form id="chatForm" class="chat-form">
+            <div class="input-wrapper">
+                <textarea 
+                    id="userInput" 
+                    placeholder="Ask me anything..." 
+                    rows="1"
+                    autofocus
+                ></textarea>
+                <button type="submit" id="sendBtn" class="send-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chatMessages = document.getElementById('chatMessages');
+const chatForm = document.getElementById('chatForm');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+
+// Auto-resize textarea
+userInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+});
+
+// Handle Enter key (Shift+Enter for new line)
+userInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatForm.dispatchEvent(new Event('submit'));
+    }
+});
+
+function addMessage(content, isUser = false, metadata = null) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+    
+    let metadataHTML = '';
+    if (metadata && !isUser) {
+        metadataHTML = `
+            <div class="message-metadata">
+                <div class="metadata-item">
+                    <span class="metadata-icon">&#128218;</span>
+                    <span>${metadata.chunks_retrieved} chunks</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-icon">&#128279;</span>
+                    <span>${metadata.relationships_found} relationships</span>
+                </div>
+            </div>
+        `;
+        
+        if (metadata.sources && metadata.sources.length > 0) {
+            const sourcesHTML = metadata.sources.map(s => `<span class="source-tag">${s}</span>`).join('');
+            metadataHTML += `
+                <div class="message-sources">
+                    <span class="sources-label">Sources:</span>
+                    ${sourcesHTML}
+                </div>
+            `;
+        }
+    }
+    
+    messageDiv.innerHTML = `
+        <div class="message-avatar">${isUser ? '&#128100;' : '&#9670;'}</div>
+        <div class="message-content">
+            <div class="message-text">${content}</div>
+            ${metadataHTML}
+        </div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function addLoadingMessage() {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'message assistant-message loading-message';
+    loadingDiv.id = 'loadingMessage';
+    loadingDiv.innerHTML = `
+        <div class="message-avatar">&#9670;</div>
+        <div class="message-content">
+            <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(loadingDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function removeLoadingMessage() {
+    const loadingMsg = document.getElementById('loadingMessage');
+    if (loadingMsg) {
+        loadingMsg.remove();
+    }
+}
+
+chatForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const message = userInput.value.trim();
+    if (!message) return;
+    
+    // Add user message
+    addMessage(message, true);
+    
+    // Clear input
+    userInput.value = '';
+    userInput.style.height = 'auto';
+    
+    // Disable input while processing
+    userInput.disabled = true;
+    sendBtn.disabled = true;
+    
+    // Show loading
+    addLoadingMessage();
+    
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message })
+        });
+        
+        const data = await response.json();
+        
+        removeLoadingMessage();
+        
+        if (data.error) {
+            addMessage(`Error: ${data.error}`, false);
+        } else {
+            addMessage(data.answer, false, {
+                chunks_retrieved: data.chunks_retrieved,
+                relationships_found: data.relationships_found,
+                sources: data.sources
+            });
+        }
+    } catch (error) {
+        removeLoadingMessage();
+        addMessage(`Error: ${error.message}`, false);
+    }
+    
+    // Re-enable input
+    userInput.disabled = false;
+    sendBtn.disabled = false;
+    userInput.focus();
+});
+</script>
+{% endblock %}
+

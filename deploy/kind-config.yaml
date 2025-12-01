@@ -1,0 +1,37 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: graph-rag
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      # Web UI
+      - containerPort: 30080
+        hostPort: 5000
+        protocol: TCP
+      # RAG API
+      - containerPort: 30081
+        hostPort: 8000
+        protocol: TCP
+      # Qdrant Dashboard
+      - containerPort: 30333
+        hostPort: 6333
+        protocol: TCP
+      # Neo4j Browser
+      - containerPort: 30474
+        hostPort: 7474
+        protocol: TCP
+      # Neo4j Bolt
+      - containerPort: 30687
+        hostPort: 7687
+        protocol: TCP
+      # Ollama
+      - containerPort: 30434
+        hostPort: 11434
+        protocol: TCP
+

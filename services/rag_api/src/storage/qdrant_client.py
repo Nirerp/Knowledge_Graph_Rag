@@ -35,7 +35,7 @@ class QdrantOrchestrator:
             qdrant_key: API key (optional, None if no authentication)
         """
         self.qdrant_client = QdrantClient(url=qdrant_url, api_key=qdrant_key)
-        self.collection_name: str = "QdrantRagCollection"
+        self.collection_name = collection_name
 
     def create_collection(self):
         """
@@ -104,7 +104,16 @@ class QdrantOrchestrator:
                 )
                 chunk_idx += 1
 
-        self.qdrant_client.upsert(collection_name=collection_name, points=points)
+        if not points:
+            print("No points to ingest into Qdrant.")
+            return
+
+        print(f"DEBUG: Ingesting {len(points)} points to Qdrant")
+        try:
+            self.qdrant_client.upsert(collection_name=collection_name, points=points)
+        except UnexpectedResponse as e:
+            print(f"DEBUG: Qdrant Upsert Failed. Response: {e.content}")
+            raise
 
 
 if __name__ == "__main__":

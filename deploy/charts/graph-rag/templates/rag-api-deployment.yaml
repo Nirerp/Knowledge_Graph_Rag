@@ -1,0 +1,94 @@
+{{- if .Values.ragApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-api
+  labels:
+    app: rag-api
+spec:
+  replicas: {{ .Values.ragApi.replicas }}
+  selector:
+    matchLabels:
+      app: rag-api
+  template:
+    metadata:
+      labels:
+        app: rag-api
+    spec:
+      containers:
+        - name: rag-api
+          image: "{{ .Values.ragApi.image.repository }}:{{ .Values.ragApi.image.tag }}"
+          imagePullPolicy: {{ .Values.ragApi.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+          env:
+            - name: LLM_MODEL
+              value: {{ .Values.ragApi.config.llmModel }}
+            - name: EMBEDDING_MODEL
+              value: {{ .Values.ragApi.config.embeddingModel }}
+            - name: EMBEDDING_DIMENSION
+              value: "{{ .Values.ragApi.config.embeddingDimension }}"
+            - name: OLLAMA_URL
+              value: "http://ollama:11434"
+            - name: OLLAMA_API_BASE
+              value: "http://ollama:11434"
+            - name: QDRANT_URL
+              value: "http://qdrant"
+            - name: QDRANT_HTTP_PORT
+              value: "6333"
+            - name: NEO4J_URL
+              value: "bolt://neo4j"
+            - name: NEO4J_BOLT_PORT
+              value: "7687"
+            - name: NEO4J_AUTH
+              value: {{ .Values.neo4j.auth }}
+            - name: CHUNK_SIZE
+              value: "{{ .Values.ragApi.config.chunkSize }}"
+            - name: CHUNK_OVERLAP
+              value: "{{ .Values.ragApi.config.chunkOverlap }}"
+            - name: RAW_DATA_FOLDER
+              value: "/app/raw_data"
+            - name: LLM_API_KEY
+              value: {{ .Values.ragApi.config.llmApiKey | quote }}
+            {{- if .Values.ragApi.config.llmApiKey }}
+            - name: GEMINI_API_KEY
+              value: {{ .Values.ragApi.config.llmApiKey | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: raw-data
+              mountPath: /app/raw_data
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 150
+      volumes:
+        - name: raw-data
+          persistentVolumeClaim:
+            claimName: raw-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-api
+spec:
+  type: {{ .Values.ragApi.service.type }}
+  ports:
+    - port: {{ .Values.ragApi.service.port }}
+      targetPort: 8000
+      {{- if eq .Values.ragApi.service.type "NodePort" }}
+      nodePort: {{ .Values.ragApi.service.nodePort }}
+      {{- end }}
+  selector:
+    app: rag-api
+{{- end }}
+

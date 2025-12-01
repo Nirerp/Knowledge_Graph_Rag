@@ -1,0 +1,85 @@
+{{- if .Values.neo4j.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: neo4j
+  labels:
+    app: neo4j
+spec:
+  serviceName: neo4j
+  replicas: {{ .Values.neo4j.replicas }}
+  selector:
+    matchLabels:
+      app: neo4j
+  template:
+    metadata:
+      labels:
+        app: neo4j
+    spec:
+      containers:
+        - name: neo4j
+          image: "{{ .Values.neo4j.image.repository }}:{{ .Values.neo4j.image.tag }}"
+          imagePullPolicy: {{ .Values.neo4j.image.pullPolicy }}
+          ports:
+            - containerPort: 7474
+            - containerPort: 7687
+          env:
+            - name: NEO4J_AUTH
+              value: {{ .Values.neo4j.auth }}
+            # Disable strict config validation so unknown settings (e.g. from mounted configs)
+            # don't prevent Neo4j from starting.
+            - name: NEO4J_server_config_strict__validation_enabled
+              value: "false"
+          volumeMounts:
+            - name: neo4j-data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 7474
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 7474
+            initialDelaySeconds: 60
+            periodSeconds: 30
+  {{- if .Values.neo4j.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: neo4j-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.neo4j.persistence.size }}
+  {{- else }}
+      volumes:
+        - name: neo4j-data
+          emptyDir: {}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neo4j
+spec:
+  type: {{ .Values.neo4j.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.neo4j.service.httpPort }}
+      targetPort: 7474
+      {{- if eq .Values.neo4j.service.type "NodePort" }}
+      nodePort: {{ .Values.neo4j.service.nodePortHttp }}
+      {{- end }}
+    - name: bolt
+      port: {{ .Values.neo4j.service.boltPort }}
+      targetPort: 7687
+      {{- if eq .Values.neo4j.service.type "NodePort" }}
+      nodePort: {{ .Values.neo4j.service.nodePortBolt }}
+      {{- end }}
+  selector:
+    app: neo4j
+{{- end }}
+

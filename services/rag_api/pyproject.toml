@@ -1,0 +1,26 @@
+[project]
+name = "graph-rag-api"
+version = "0.1.0"
+description = "FastAPI backend for Graph RAG system"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "python-dotenv>=1.0.0",
+    "litellm>=1.80.0",
+    "neo4j>=5.17.0,<6.0.0",
+    "neo4j-graphrag",
+    "qdrant-client>=1.15.1",
+    "openai-agents[litellm]>=0.6.1",
+    "pydantic>=2.0.0",
+    "docling>=2.62.0",
+    "langchain-text-splitters>=1.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["services"]
+

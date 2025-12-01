@@ -1,0 +1,556 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Files - Graph RAG{% endblock %}
+
+{% block content %}
+<div class="upload-container">
+    <div class="upload-header">
+        <h1>Upload Documents</h1>
+        <p class="subtitle">Add PDFs, text files, or markdown to your knowledge base</p>
+    </div>
+    
+    <div class="upload-grid">
+        <!-- Upload Zone -->
+        <div class="upload-zone-wrapper">
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17,8 12,3 7,8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <p class="upload-text">Drag & drop files here</p>
+                <p class="upload-subtext">or click to browse</p>
+                <p class="upload-formats">PDF, TXT, MD, JPG, PNG</p>
+                <input type="file" id="fileInput" multiple accept=".pdf,.txt,.md,.jpg,.jpeg,.png" hidden>
+            </div>
+            
+            <div class="upload-progress" id="uploadProgress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-text" id="progressText">Uploading...</p>
+            </div>
+        </div>
+        
+        <!-- File List -->
+        <div class="files-panel">
+            <div class="files-header">
+                <h2>Uploaded Files</h2>
+                <span class="file-count" id="fileCount">{{ files|length }} files</span>
+            </div>
+            
+            <div class="files-list" id="filesList">
+                {% if files %}
+                    {% for file in files %}
+                    <div class="file-item" data-filename="{{ file.name }}">
+                        <div class="file-icon">
+                            {% if file.extension == '.pdf' %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                            </svg>
+                            {% else %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                                <polyline points="13,2 13,9 20,9"/>
+                            </svg>
+                            {% endif %}
+                        </div>
+                        <div class="file-info">
+                            <span class="file-name">{{ file.name }}</span>
+                            <span class="file-size">{{ "%.1f"|format(file.size / 1024) }} KB</span>
+                        </div>
+                        <button class="file-delete" onclick="deleteFile('{{ file.name }}')" title="Delete">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="files-empty">
+                        <p>No files uploaded yet</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Ingestion Button -->
+            <div class="ingest-section">
+                <button class="ingest-btn" id="ingestBtn" onclick="triggerIngestion()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polygon points="10,8 16,12 10,16"/>
+                    </svg>
+                    <span>Process & Ingest</span>
+                </button>
+                <p class="ingest-hint">Extract knowledge from uploaded files</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Status Messages -->
+    <div class="status-message" id="statusMessage" style="display: none;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const uploadProgress = document.getElementById('uploadProgress');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const statusMessage = document.getElementById('statusMessage');
+
+// Drag and drop handlers
+uploadZone.addEventListener('click', () => fileInput.click());
+
+uploadZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadZone.classList.add('dragover');
+});
+
+uploadZone.addEventListener('dragleave', () => {
+    uploadZone.classList.remove('dragover');
+});
+
+uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    uploadFiles(files);
+});
+
+fileInput.addEventListener('change', (e) => {
+    uploadFiles(e.target.files);
+});
+
+async function uploadFiles(files) {
+    if (files.length === 0) return;
+    
+    uploadProgress.style.display = 'block';
+    let uploaded = 0;
+    
+    for (const file of files) {
+        progressText.textContent = `Uploading ${file.name}...`;
+        progressFill.style.width = `${(uploaded / files.length) * 100}%`;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                showStatus(`Error: ${data.error}`, 'error');
+            } else {
+                uploaded++;
+                addFileToList(data.filename, data.size);
+            }
+        } catch (error) {
+            showStatus(`Error uploading ${file.name}: ${error.message}`, 'error');
+        }
+    }
+    
+    progressFill.style.width = '100%';
+    progressText.textContent = `${uploaded} file(s) uploaded`;
+    
+    setTimeout(() => {
+        uploadProgress.style.display = 'none';
+        progressFill.style.width = '0';
+    }, 2000);
+    
+    updateFileCount();
+}
+
+function addFileToList(filename, size) {
+    const filesList = document.getElementById('filesList');
+    const emptyMsg = filesList.querySelector('.files-empty');
+    if (emptyMsg) emptyMsg.remove();
+    
+    const ext = '.' + filename.split('.').pop().toLowerCase();
+    const isPdf = ext === '.pdf';
+    
+    const fileItem = document.createElement('div');
+    fileItem.className = 'file-item';
+    fileItem.dataset.filename = filename;
+    fileItem.innerHTML = `
+        <div class="file-icon">
+            ${isPdf ? 
+                '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>' :
+                '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13,2 13,9 20,9"/></svg>'
+            }
+        </div>
+        <div class="file-info">
+            <span class="file-name">${filename}</span>
+            <span class="file-size">${(size / 1024).toFixed(1)} KB</span>
+        </div>
+        <button class="file-delete" onclick="deleteFile('${filename}')" title="Delete">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+        </button>
+    `;
+    filesList.appendChild(fileItem);
+}
+
+async function deleteFile(filename) {
+    if (!confirm(`Delete ${filename}?`)) return;
+    
+    try {
+        const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            showStatus(`Error: ${data.error}`, 'error');
+        } else {
+            const fileItem = document.querySelector(`[data-filename="${filename}"]`);
+            if (fileItem) fileItem.remove();
+            showStatus(`${filename} deleted`, 'success');
+            updateFileCount();
+        }
+    } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+    }
+}
+
+async function triggerIngestion() {
+    const btn = document.getElementById('ingestBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Processing...';
+    
+    try {
+        const response = await fetch('/api/ingest', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            showStatus(`Error: ${data.error}`, 'error');
+        } else {
+            showStatus(
+                `Successfully processed ${data.files_processed} files. Created ${data.nodes_created} nodes and ${data.relationships_created} relationships.`,
+                'success'
+            );
+        }
+    } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="10,8 16,12 10,16"/>
+        </svg>
+        <span>Process & Ingest</span>
+    `;
+}
+
+function showStatus(message, type) {
+    statusMessage.textContent = message;
+    statusMessage.className = `status-message ${type}`;
+    statusMessage.style.display = 'block';
+    
+    setTimeout(() => {
+        statusMessage.style.display = 'none';
+    }, 5000);
+}
+
+function updateFileCount() {
+    const count = document.querySelectorAll('.file-item').length;
+    document.getElementById('fileCount').textContent = `${count} file${count !== 1 ? 's' : ''}`;
+}
+</script>
+
+<style>
+/* Upload Page Specific Styles */
+.upload-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: var(--space-xl);
+}
+
+.upload-header {
+    text-align: center;
+    margin-bottom: var(--space-2xl);
+}
+
+.upload-header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: var(--space-sm);
+}
+
+.upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+}
+
+@media (max-width: 768px) {
+    .upload-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Upload Zone */
+.upload-zone {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--space-2xl);
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition-base);
+    background: var(--bg-secondary);
+}
+
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent-primary);
+    background: var(--accent-glow);
+}
+
+.upload-icon {
+    color: var(--accent-primary);
+    margin-bottom: var(--space-md);
+}
+
+.upload-text {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: var(--space-xs);
+}
+
+.upload-subtext {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: var(--space-md);
+}
+
+.upload-formats {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+/* Progress */
+.upload-progress {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius-sm);
+}
+
+.progress-bar {
+    height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--accent-primary);
+    width: 0;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: var(--space-sm);
+}
+
+/* Files Panel */
+.files-panel {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.files-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.files-header h2 {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.file-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.files-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+.files-empty {
+    padding: var(--space-xl);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition-fast);
+}
+
+.file-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.file-icon {
+    color: var(--accent-primary);
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    display: block;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-size {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.file-delete {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: 4px;
+    transition: var(--transition-fast);
+}
+
+.file-delete:hover {
+    color: var(--error);
+    background: rgba(248, 81, 73, 0.1);
+}
+
+/* Ingest Section */
+.ingest-section {
+    padding: var(--space-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.ingest-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.ingest-btn:hover:not(:disabled) {
+    background: var(--accent-secondary);
+}
+
+.ingest-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.ingest-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: var(--space-sm);
+}
+
+/* Status Message */
+.status-message {
+    position: fixed;
+    bottom: var(--space-xl);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--space-md) var(--space-xl);
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    animation: slideUp 0.3s ease;
+    z-index: 1000;
+}
+
+.status-message.success {
+    background: var(--success);
+    color: white;
+}
+
+.status-message.error {
+    background: var(--error);
+    color: white;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
+

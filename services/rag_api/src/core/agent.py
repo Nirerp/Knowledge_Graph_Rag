@@ -1,13 +1,16 @@
-from graph_agents.config.const import SYSTEM_PROMPT
-from graph_agents.config.schemas import AgentResponse
+"""
+Answering agent for the Hybrid RAG system.
+"""
 
-from agents import Agent, Runner, function_tool, set_tracing_disabled
+from services.rag_api.src.core.config import AGENT_SYSTEM_PROMPT
+from services.rag_api.src.models.responses import AgentResponse
+from services.rag_api.src.core.retrieval import retrieve_knowledge
+
+from agents import Agent, Runner, set_tracing_disabled
 from agents.extensions.models.litellm_model import LitellmModel
 import asyncio
 import os
 from dotenv import load_dotenv
-
-from graph_agents.tools.retrieve_answer import retrieve_knowledge
 
 
 # Disable openai-agents tracing to suppress "OPENAI_API_KEY is not set" warning
@@ -27,7 +30,7 @@ api_key = os.getenv("LLM_API_KEY")
 async def main():
     agent = Agent(
         name="Answering_Agent",
-        instructions=SYSTEM_PROMPT,
+        instructions=AGENT_SYSTEM_PROMPT,
         model=LitellmModel(model=model, api_key=api_key),
         tools=[retrieve_knowledge],
     )
@@ -35,6 +38,7 @@ async def main():
     print("Hybrid RAG Agent Initialized. Type 'exit' to quit.")
 
     while True:
+        print(f"model used by agent is: {agent.model.model}")
         try:
             user_input = input("\nUser: ")
             if user_input.lower() in ["exit", "quit"]:

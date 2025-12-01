@@ -5,8 +5,8 @@ Also, this module contains embedding functions, chunking functions and any other
 
 import uuid
 from litellm import completion
-from config.config import LLM_INGESTION_PROMPT
-from config.datasets import GraphComponents
+from services.rag_api.src.core.config import GRAPH_EXTRACTION_PROMPT
+from services.rag_api.src.models.schemas import GraphComponents
 
 
 class Orchestrator:
@@ -17,7 +17,6 @@ class Orchestrator:
     - Ingesting the graph data
     - Querying the graph data
     - Retrieving the graph data
-    - Returning the graph data
     - Returning the graph data
     """
 
@@ -56,7 +55,7 @@ class Orchestrator:
             response_format=GraphComponents,  # notice that this is a json_object, not a json_schema
             # some models require "response_format" to be a json_schema, not a json_schema - check LITELLM docs for more details
             messages=[
-                {"role": "system", "content": LLM_INGESTION_PROMPT},
+                {"role": "system", "content": GRAPH_EXTRACTION_PROMPT},
                 {"role": "user", "content": prompt},
             ],
         )
@@ -77,7 +76,7 @@ class Orchestrator:
         """
         nodes = {}
         relationships = []
-        chunk_node_mapping = {}  # NEW: Track which entities appear in which chunks
+        chunk_node_mapping = {}  # Track which entities appear in which chunks
 
         # Normalize input into iterable chunks
         chunks_to_process = []
@@ -97,12 +96,12 @@ class Orchestrator:
             raise ValueError("raw_text must be a string or list of chunks.")
 
         for idx, chunk in enumerate(chunks_to_process):
-            chunk_id = str(uuid.uuid4())  # NEW: Generate UUID for this chunk
+            chunk_id = str(uuid.uuid4())  # Generate UUID for this chunk
             chunk_node_mapping[chunk_id] = {
                 "text": chunk["text"],
                 "source_file": chunk["source"],
                 "chunk_index": idx,
-                "entity_ids": [],  # NEW: Track entities mentioned in this chunk
+                "entity_ids": [],  # Track entities mentioned in this chunk
             }
 
             system_prompt = (
@@ -120,14 +119,14 @@ class Orchestrator:
                 if node and node not in nodes:
                     nodes[node] = str(uuid.uuid4())
 
-                # NEW: Add entity to this chunk's entity list
+                # Add entity to this chunk's entity list
                 if node:
                     chunk_node_mapping[chunk_id]["entity_ids"].append(nodes[node])
 
                 if target_node and target_node not in nodes:
                     nodes[target_node] = str(uuid.uuid4())
 
-                # NEW: Add target entity to this chunk's entity list
+                # Add target entity to this chunk's entity list
                 if target_node:
                     chunk_node_mapping[chunk_id]["entity_ids"].append(
                         nodes[target_node]
@@ -143,7 +142,7 @@ class Orchestrator:
                         }
                     )
 
-        return nodes, relationships, chunk_node_mapping  # NEW: Return 3 values
+        return nodes, relationships, chunk_node_mapping
 
 
 if __name__ == "__main__":

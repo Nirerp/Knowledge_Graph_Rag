@@ -1,0 +1,7 @@
+apiVersion: v2
+name: graph-rag
+description: Hybrid RAG system combining vector search and knowledge graphs
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+

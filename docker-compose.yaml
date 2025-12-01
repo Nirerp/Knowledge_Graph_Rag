@@ -1,45 +1,124 @@
 services:
-  qdrant: # access dashboard at http://localhost:6333/dashboard
+  # Ollama - LLM & Embeddings Service
+  ollama:
+    build:
+      context: .
+      dockerfile: services/ollama/Dockerfile
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Qdrant - Vector Database
+  qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant
     ports:
-      - "${QDRANT_HTTP_PORT}:6333"  # HTTP REST API
-      - "${QDRANT_GRPC_PORT}:6334"  # gRPC API
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
     volumes:
-      - ./qdrant_data:/qdrant/storage  # Maps local qdrant_data folder to container storage (default path)
+      - ./qdrant_data:/qdrant/storage
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
-  neo4j: # access browser at http://localhost:7474
+  # Neo4j - Graph Database
+  neo4j:
     image: neo4j:latest
     container_name: neo4j
     ports:
-      - "${NEO4J_HTTP_PORT}:7474"  # HTTP interface (Neo4j Browser)
-      - "${NEO4J_BOLT_PORT}:7687"  # Bolt protocol (database connections)
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
     volumes:
-      - ./neo4j/data:/data          # Database data
-      - ./neo4j/logs:/logs          # Log files
-      - ./neo4j/conf:/conf          # Configuration files
-      - ./neo4j/import:/import      # Import directory
-      - ./neo4j/plugins:/plugins    # Plugins directory
+      - ./neo4j/data:/data
+      - ./neo4j/logs:/logs
+      - ./neo4j/conf:/conf
+      - ./neo4j/import:/import
+      - ./neo4j/plugins:/plugins
     environment:
-      - NEO4J_AUTH=${NEO4J_AUTH}   # Format: username/password
+      - NEO4J_AUTH=${NEO4J_AUTH:-neo4j/password}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7474/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # RAG API - FastAPI Backend
+  rag-api:
+    build:
+      context: .
+      dockerfile: services/rag_api/Dockerfile
+    container_name: rag-api
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_MODEL=${LLM_MODEL:-ollama/llama3.2:3b}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-ollama/mxbai-embed-large:335m}
+      - EMBEDDING_DIMENSION=${EMBEDDING_DIMENSION:-1024}
+      - OLLAMA_URL=http://ollama:11434
+      - QDRANT_URL=http://qdrant
+      - QDRANT_HTTP_PORT=6333
+      - NEO4J_URL=bolt://neo4j
+      - NEO4J_BOLT_PORT=7687
+      - NEO4J_AUTH=${NEO4J_AUTH:-neo4j/password}
+      - RAW_DATA_FOLDER=/app/raw_data
+      - CHUNK_SIZE=${CHUNK_SIZE:-512}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-100}
+    volumes:
+      - ./raw_data:/app/raw_data
+    depends_on:
+      ollama:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
     restart: unless-stopped
 
-  # Web application service (uncomment and configure when ready)
-  # webapp:
-  #   build: .
-  #   # Or use a pre-built image:
-  #   # image: your-webapp:latest
-  #   container_name: webapp
-  #   ports:
-  #     - "5000:5000"  # Flask default, or "8501:8501" for Streamlit
-  #   volumes:
-  #     - ./app:/app
-  #   environment:
-  #     - FLASK_ENV=development
-  #     # Or for Streamlit:
-  #     # - STREAMLIT_SERVER_PORT=8501
-  #   depends_on:
-  #     - qdrant
-  #     - neo4j
-  #   restart: unless-stopped
+  # Web UI - Flask Frontend
+  web-ui:
+    build:
+      context: .
+      dockerfile: services/web_ui/Dockerfile
+    container_name: web-ui
+    ports:
+      - "5000:5000"
+    environment:
+      - LLM_MODEL=${LLM_MODEL:-ollama/llama3.2:3b}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-ollama/mxbai-embed-large:335m}
+      - EMBEDDING_DIMENSION=${EMBEDDING_DIMENSION:-1024}
+      - OLLAMA_URL=http://ollama:11434
+      - QDRANT_URL=http://qdrant
+      - QDRANT_HTTP_PORT=6333
+      - NEO4J_URL=bolt://neo4j
+      - NEO4J_BOLT_PORT=7687
+      - NEO4J_AUTH=${NEO4J_AUTH:-neo4j/password}
+      - RAW_DATA_FOLDER=/app/raw_data
+      - CHUNK_SIZE=${CHUNK_SIZE:-512}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-100}
+    volumes:
+      - ./raw_data:/app/raw_data
+    depends_on:
+      ollama:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  ollama_data:

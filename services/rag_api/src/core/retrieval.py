@@ -146,23 +146,35 @@ def retrieve_knowledge(query: str) -> str:
 
     try:
         # Step 1: Embed
+        print(f"DEBUG: Embedding query: {query}")
         query_vector = get_embedding(query)
 
         # Step 2: Vector Search
+        print(f"DEBUG: Searching Qdrant...")
         retriever_result = search_qdrant(neo4j_driver, qdrant_client, query_vector)
+        print(f"DEBUG: Qdrant returned {len(retriever_result.items)} items")
+        
+        # Debug: Print raw retriever results
+        for i, item in enumerate(retriever_result.items):
+            print(f"DEBUG: Item {i}: {item.content[:200]}...")
 
         # Step 3: Parse Results
         chunks, chunk_ids = parse_retriever_results(retriever_result)
+        print(f"DEBUG: Parsed {len(chunks)} chunks, {len(chunk_ids)} IDs")
 
         # Step 4: Graph Search
         relationships = fetch_graph_context(neo4j_driver, chunk_ids)
+        print(f"DEBUG: Found {len(relationships)} relationships")
 
         # Step 5: Format Output
         final_context = format_context(chunks, relationships)
+        print(f"DEBUG: Final context length: {len(final_context)} chars")
+        print(f"DEBUG: Context preview:\n{final_context[:500]}")
 
         return final_context
 
     except Exception as e:
+        print(f"DEBUG: Error in retrieve_knowledge: {str(e)}")
         return f"Error retrieving knowledge: {str(e)}"
 
     finally:

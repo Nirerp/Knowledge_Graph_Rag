@@ -244,4 +244,4 @@ This project is licensed under the **GraphRAG Small Business License 1.0**:
 - **Free use** for individuals and small businesses (fewer than 250 employees or less than USD 10M annual revenue), including commercial use.
 - **Enterprise users** (above those thresholds) must obtain a separate commercial license by contacting the author before using this project in production or as part of a product.
 
-See the `LICENSE` file in this repository for the full legal text.
+See the [LICENSE](LICENSE) file in this repository for the full legal text.

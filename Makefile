@@ -1,4 +1,4 @@
-.PHONY: help start stop clean build dev logs logs-ollama logs-api logs-ui test-imports
+.PHONY: help start pause resume stop clean build dev logs logs-ollama logs-api logs-ui test-imports
 
 # Use a disk-backed temp directory for Kind image loading (avoids /tmp tmpfs limits)
 KIND_TMPDIR ?= ~/.kind-tmp
@@ -14,6 +14,8 @@ help:
 	@echo ""
 	@echo "Kubernetes (Kind + Helm):"
 	@echo "  make start        - Create Kind cluster and deploy all services"
+	@echo "  make pause        - Scale down all pods (preserves data)"
+	@echo "  make resume       - Scale up all pods"
 	@echo "  make stop         - Stop and delete Kind cluster"
 	@echo "  make build        - Build Docker images for all services"
 	@echo ""
@@ -93,6 +95,31 @@ start:
 	@echo "  Ollama:      http://localhost:11434"
 	@echo ""
 	@echo "Note: Ollama is pulling models. Check status with: make logs-ollama"
+
+pause:
+	@echo "Pausing all pods (data preserved)..."
+	kubectl scale deployment rag-api --replicas=0
+	kubectl scale deployment web-ui --replicas=0
+	kubectl scale deployment ollama --replicas=0
+	kubectl scale statefulset qdrant --replicas=0
+	kubectl scale statefulset neo4j --replicas=0
+	@echo "All pods stopped. Data is preserved in PersistentVolumes."
+	@echo "Resume with: make resume"
+
+resume:
+	@echo "Resuming all pods..."
+	kubectl scale deployment rag-api --replicas=1
+	kubectl scale deployment web-ui --replicas=1
+	kubectl scale deployment ollama --replicas=1
+	kubectl scale statefulset qdrant --replicas=1
+	kubectl scale statefulset neo4j --replicas=1
+	@echo "Waiting for pods to be ready..."
+	kubectl wait --for=condition=ready pod -l app=rag-api --timeout=300s
+	kubectl wait --for=condition=ready pod -l app=web-ui --timeout=300s
+	kubectl wait --for=condition=ready pod -l app=ollama --timeout=300s
+	kubectl wait --for=condition=ready pod -l app=qdrant --timeout=300s
+	kubectl wait --for=condition=ready pod -l app=neo4j --timeout=300s
+	@echo "All pods resumed and ready!"
 
 stop:
 	@echo "Stopping Graph RAG..."

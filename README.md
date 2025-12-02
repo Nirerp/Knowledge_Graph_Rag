@@ -10,7 +10,10 @@
 A production-grade, **LLM-agnostic Hybrid RAG (Retrieval-Augmented Generation)** system designed for flexibility, scalability, and unbiased data retrieval. By combining vector similarity search (Qdrant) with knowledge graph relationships (Neo4j), GraphRAG delivers superior context awareness and reduced hallucinations compared to traditional RAG approaches.
 
 <!-- IMAGE: Architecture Overview -->
-![PLACEHOLDER: System Architecture Diagram](assets/architecture_overview.png)
+![Alt text](assets/workflow.png)
+
+
+
 
 ---
 
@@ -103,7 +106,7 @@ Once the terminal confirms the system is running:
 *   Upload a document (PDF, TXT, MD) via the "Upload" tab.
 *   Switch to "Chat" and ask questions about your data!
 
-![PLACEHOLDER: Web UI Screenshot](assets/web_ui_screenshot.png)
+![Alt text](assets/upload_panel.png)
 
 ### 5. Shutdown
 To stop the cluster and remove all resources:
@@ -175,8 +178,7 @@ The system operates as a microservices architecture on Kubernetes:
     *   **Graph Search** traverses relationships from key entities.
     *   **Synthesis** combines all context to generate the final answer.
 
-![PLACEHOLDER: Ingestion Pipeline Diagram](assets/ingestion_workflow.png)
-<!-- IMAGE: Ingestion Pipeline -->
+
 
 ---
 

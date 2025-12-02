@@ -6,6 +6,9 @@
 [![Helm](https://img.shields.io/badge/helm-%23000000.svg?style=flat&logo=helm&logoColor=white)](https://helm.sh/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Flask](https://img.shields.io/badge/flask-%23000.svg?style=flat&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![LangChain](https://img.shields.io/badge/🦜_LangChain-1C3C3C?style=flat)](https://www.langchain.com/)
+[![LiteLLM](https://img.shields.io/badge/LiteLLM-000000?style=flat&logo=openai&logoColor=white)](https://github.com/BerriAI/litellm)
+
 
 A production-grade, **LLM-agnostic Hybrid RAG (Retrieval-Augmented Generation)** system designed for flexibility, scalability, and unbiased data retrieval. By combining vector similarity search (Qdrant) with knowledge graph relationships (Neo4j), GraphRAG delivers superior context awareness and reduced hallucinations compared to traditional RAG approaches.
 

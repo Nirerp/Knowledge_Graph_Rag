@@ -48,6 +48,20 @@ build/
 *.sqlite3
 *.log
 
+# Images (exclude everywhere except assets/)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+!assets/*.png
+!assets/*.jpg
+!assets/*.jpeg
+!assets/*.gif
+!assets/*.svg
+!assets/*.webp
+
 # Editor
 .vscode/
 .idea/

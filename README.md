@@ -171,6 +171,10 @@ The system operates as a microservices architecture on Kubernetes:
     *   **Embedding Model** converts chunks to vectors → Stored in **Qdrant**.
     *   **LLM** extracts Entities & Relationships → Stored in **Neo4j**.
 
+![Alt text](assets/qdrant_collections.png)
+
+![Alt text](assets/neo4j_relations.png)
+
 2.  **Retrieval Pipeline:**
     *   **User** asks question (Web UI) → **RAG API**.
     *   **Agent** determines intent.
@@ -178,7 +182,7 @@ The system operates as a microservices architecture on Kubernetes:
     *   **Graph Search** traverses relationships from key entities.
     *   **Synthesis** combines all context to generate the final answer.
 
-
+![Alt text](assets/agent_answer_2.png)
 
 ---
 

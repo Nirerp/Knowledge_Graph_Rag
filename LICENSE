@@ -1,0 +1,31 @@
+GraphRAG Small Business License 1.0
+
+Copyright (c) 2024 Nir Potasman
+
+Permission is hereby granted, free of charge, to any natural person or business entity ("User") to use, copy, modify, and distribute this Software, subject to the following conditions:
+
+1. Small Business / Individual Use
+
+1.1. This Software may be used, copied, modified, and distributed, including for commercial purposes, by:
+    (a) Individuals; and
+    (b) Organizations with fewer than 250 employees OR less than USD 10,000,000 (ten million) in annual gross revenue,
+    (collectively, "Small Business Users"),
+    without the need to obtain a separate commercial license, provided that this License notice is included in all copies or substantial portions of the Software.
+
+2. Enterprise Use
+
+2.1. Any use of this Software by an organization that does not qualify as a Small Business User under Section 1.1 ("Enterprise User") requires a separate, written commercial license agreement with the copyright holder.
+
+2.2. Enterprise Users must contact the copyright holder to obtain such a license before using, copying, modifying, or distributing the Software.
+
+3. No Trademark Rights
+
+This License does not grant any rights to use the name, logo, or trademarks of the copyright holder.
+
+4. No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+5. Non-Open-Source Notice
+
+This is a source-available license and is not an OSI-approved open-source license. It imposes additional restrictions on Enterprise Users as described above.

@@ -79,7 +79,7 @@ start:
 	TMPDIR=$(KIND_TMPDIR) kind load docker-image graph-rag/ollama:latest --name graph-rag
 	@echo ""
 	@echo "Step 4: Installing Helm chart..."
-	helm upgrade --install graph-rag deploy/charts/graph-rag/ --wait --timeout 10m
+	helm upgrade --install graph-rag deploy/charts/graph-rag/ --wait --timeout 20m
 	@echo ""
 	@echo "========================================="
 	@echo "Graph RAG is ready!"

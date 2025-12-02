@@ -2,6 +2,8 @@
 
 This system uses [LiteLLM](https://docs.litellm.ai/docs/) for model abstraction, meaning it supports virtually any LLM provider. However, due to the requirements of **Graph Extraction** (strict JSON structure) and **RAG Synthesis** (complex reasoning), not all models are suitable.
 
+> ⚠️ **CRITICAL REQUIREMENT**: Any model used with this system MUST support reliable **structured JSON output**. Models that cannot strictly follow JSON schemas will fail during ingestion (graph extraction) and retrieval.
+
 Below is a curated list of models recommended for this architecture.
 
 ## 🟢 Local Models (via Ollama)

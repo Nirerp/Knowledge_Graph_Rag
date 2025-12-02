@@ -1,0 +1,105 @@
+# Graph RAG Helm Chart Values
+
+global:
+  namespace: graph-rag
+
+# Ollama - LLM & Embeddings
+ollama:
+  enabled: true
+  image:
+    repository: graph-rag/ollama
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    type: NodePort
+    port: 11434
+    nodePort: 30434
+  models:
+    llm: "qwen2.5:7b"  # Passed to start.sh via env var (7b recommended for <16GB RAM)
+    embedding: "mxbai-embed-large:335m"
+  resources:
+    requests:
+      memory: "6Gi"
+      cpu: "2"
+    limits:
+      memory: "10Gi"
+      cpu: "4"
+
+# Qdrant - Vector Database
+qdrant:
+  enabled: true
+  image:
+    repository: qdrant/qdrant
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    type: NodePort
+    httpPort: 6333
+    grpcPort: 6334
+    nodePort: 30333
+  persistence:
+    enabled: true
+    size: 10Gi
+  collection:
+    name: "QdrantRagCollection"
+    vectorSize: 1024
+    distance: "Cosine"
+
+# Neo4j - Graph Database
+neo4j:
+  enabled: true
+  image:
+    repository: neo4j
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  auth: "neo4j/password"
+  service:
+    type: NodePort
+    httpPort: 7474
+    boltPort: 7687
+    nodePortHttp: 30474
+    nodePortBolt: 30687
+  persistence:
+    enabled: true
+    size: 10Gi
+
+# RAG API - FastAPI Backend
+ragApi:
+  enabled: true
+  image:
+    repository: graph-rag/rag-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    type: NodePort
+    port: 8000
+    nodePort: 30081
+  config:
+    llmModel: "gemini/gemini-2.5-pro" # for local model - ollama/qwen2.5:14b for example.
+    # for openai models - openai/gpt-4o-mini for example.
+    # for groq models - groq/llama-3.3-70b-versatile for example.
+    # for anthropic models - anthropic/claude-3-5-sonnet-20240620 for example.
+    # for deepseek models - deepseek/deepseek-chat for example.
+    llmApiKey: ""  # Required for cloud models
+    embeddingModel: "ollama/mxbai-embed-large:335m"
+    embeddingDimension: 1024
+    chunkSize: 512
+    chunkOverlap: 100
+
+# Web UI - Flask Frontend
+webUi:
+  enabled: true
+  image:
+    repository: graph-rag/web-ui
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    type: NodePort
+    port: 5000
+    nodePort: 30080
+

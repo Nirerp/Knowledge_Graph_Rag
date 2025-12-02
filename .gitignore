@@ -1,32 +1,54 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
+# Environment Variables
 .env
+.env.*
 
-# Database data directories (created by Docker Compose)
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+main.ipynb
+tests.ipynb
+
+# Databases (Local persistence)
 neo4j/
 qdrant_data/
 
-# Raw data folder - ignore contents but keep folder structure
+# Uploaded Data
 raw_data/*
 !raw_data/.gitkeep
-*.pdf
-*.txt
-*.jpg
-*.jpeg
-*.png
 
-# redundant files
-__pycache__/
-*.py[oc]
-build/
+# Build Artifacts
 dist/
-wheels/
-*.egg-info
+build/
+*.egg-info/
+
+# Large Files / Temporary Files
+*.pdf
+*.db
+*.sqlite3
+*.log
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
